@@ -1,11 +1,21 @@
 use anyhow::{Context, Result};
 use notify_rust::Notification;
 use std::collections::HashMap;
-use std::env;
 use std::process::{Child, Command};
 use std::time::Duration;
 use thirtyfour::prelude::*;
 use tokio::time::sleep;
+
+// ============================================================================
+// EMBEDDED CONFIGURATION - Loaded at compile time from .env file
+// ============================================================================
+// These values are read from .env during compilation (via build.rs) and
+// embedded directly into the binary. The .env file is in .gitignore,
+// so credentials are never committed to GitHub.
+const ROUTER_IP: &str = env!("EMBEDDED_ROUTER_IP");
+const ROUTER_PASSWORD: &str = env!("EMBEDDED_ROUTER_PASSWORD");
+const PPPOE_CREDENTIALS: &str = env!("EMBEDDED_PPPOE_CREDENTIALS");
+// ============================================================================
 
 /// Start ChromeDriver as a subprocess
 ///
@@ -329,8 +339,8 @@ async fn which_pppoe_id_running(router_ip: &str, router_password: &str) -> Resul
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Load environment variables from .env file
-    dotenvy::dotenv().context("Failed to load .env file")?;
+    // Configuration is embedded at compile time from .env file via build.rs
+    // No need to load .env at runtime
     
     // Start ChromeDriver
     let chromedriver_process = start_chromedriver()?;
@@ -346,15 +356,12 @@ async fn main() -> Result<()> {
 
 /// Main automation logic
 async fn run_automation() -> Result<()> {
-    // Load router configuration from environment
-    let router_ip = env::var("ROUTER_IP")
-        .context("ROUTER_IP not set in .env file")?;
-    let router_password = env::var("ROUTER_PASSWORD")
-        .context("ROUTER_PASSWORD not set in .env file")?;
+    // Use embedded configuration (compiled into binary from .env file)
+    let router_ip = ROUTER_IP;
+    let router_password = ROUTER_PASSWORD;
     
-    // Load PPPoE credentials from environment
-    let pppoe_credentials_str = env::var("PPPOE_CREDENTIALS")
-        .context("PPPOE_CREDENTIALS not set in .env file")?;
+    // Use embedded PPPoE credentials
+    let pppoe_credentials_str = PPPOE_CREDENTIALS;
     
     // Parse PPPoE credentials (format: "id1:pass1,id2:pass2,...")
     let mut pppoe_id_pass: HashMap<String, String> = HashMap::new();
